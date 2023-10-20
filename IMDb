@@ -1,0 +1,117 @@
+--Database can be found here: https://relational.fit.cvut.cz/dataset/IMDb
+
+SET sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''));
+
+
+
+-- show which actors have the most film count in the database
+SELECT first_name, 
+		last_name,
+		film_count,
+        id
+FROM roles
+LEFT JOIN actors ON actors.id = roles.actor_id
+GROUP BY id
+ORDER BY film_count DESC;
+
+
+SELECT concat(first_name, ' ', last_name) AS actor,
+		film_count
+FROM roles
+LEFT JOIN actors ON actors.id = roles.actor_id
+GROUP BY id
+ORDER BY film_count DESC;
+
+
+
+-- which females actresses have highest film count 
+SELECT concat(first_name, ' ', last_name) AS actor,
+		film_count
+FROM roles
+LEFT JOIN actors ON actors.id = roles.actor_id
+WHERE gender = 'F'
+GROUP BY id
+ORDER BY film_count DESC;
+
+-- actors and their roles in particular movies
+SELECT concat(first_name, ' ', last_name) AS actor,
+		movies.name,
+        roles.role
+FROM roles
+LEFT JOIN actors ON actors.id = roles.actor_id
+LEFT JOIN movies ON movies.id = roles.movie_id
+ORDER BY movies.name;
+
+
+-- movies and their (multiple genres) along w/ years
+SELECT movies.name, movies.year, genre, id 
+FROM movies
+LEFT JOIN movies_genres ON movies_genres.movie_id = movies.id;
+
+-- how many films each actor has in each genre
+SELECT distinct concat(actors.first_name, ' ', actors.last_name) AS actor,
+		movies_genres.genre,
+        count(movies_genres.genre) AS movie_count
+FROM movies
+LEFT JOIN movies_genres ON movies_genres.movie_id = movies.id
+LEFT JOIN roles ON movies.id = roles.movie_id
+LEFT JOIN actors ON actors.id = roles.actor_id
+GROUP BY actor, movies_genres.genre
+ORDER BY actor, movie_count DESC;
+
+-- actors and their roles in movies
+SELECT distinct concat(first_name, ' ', last_name) AS actor,
+		roles.role, 
+        movies.name AS movie
+FROM movies
+LEFT JOIN movies_genres ON movies_genres.movie_id = movies.id
+LEFT JOIN roles ON movies.id = roles.movie_id
+LEFT JOIN actors ON actors.id = roles.actor_id;
+
+-- directors and their movies w/ rankings 
+SELECT movies.name AS movie,
+		concat(directors.first_name, ' ', directors.last_name) AS director,
+        movies.rank
+FROM movies
+LEFT JOIN movies_directors ON movies.id = movies_directors.movie_id
+LEFT JOIN directors ON directors.id = movies_directors.director_id
+ORDER BY movies.rank DESC;
+
+-- movie ranking next to average ranking of all movies using windows function
+SELECT movies.name AS movie,
+		concat(directors.first_name, ' ', directors.last_name) AS director,
+        movies.rank,
+        AVG(movies.rank) OVER() AS average_ranking
+FROM movies
+LEFT JOIN movies_directors ON movies.id = movies_directors.movie_id
+LEFT JOIN directors ON directors.id = movies_directors.director_id
+ORDER BY movies.rank DESC;
+
+
+-- movies ranking next to average ranking of particular genre using windows function
+SELECT movies.name AS movie,
+		movies_genres.genre,
+        movies.rank,
+        AVG(movies.rank) OVER(partition by movies_genres.genre ) AS avg_genre_ranking
+FROM movies
+LEFT JOIN movies_genres ON movies_genres.movie_id = movies.id
+ORDER BY movies_genres.genre;
+
+-- subquery showing highest ranked movies and their directors
+SELECT movies.name AS movie,
+		concat(directors.first_name, ' ', directors.last_name) AS director,
+        movies.rank
+FROM movies
+LEFT JOIN movies_directors ON movies.id = movies_directors.movie_id
+LEFT JOIN directors ON directors.id = movies_directors.director_id
+WHERE movies.rank = (SELECT MAX(movies.rank) FROM movies); 
+
+-- subquery showing lowest ranked movies and the director
+SELECT movies.name AS movie,
+		concat(directors.first_name, ' ', directors.last_name) AS director,
+        movies.rank
+FROM movies
+LEFT JOIN movies_directors ON movies.id = movies_directors.movie_id
+LEFT JOIN directors ON directors.id = movies_directors.director_id
+WHERE movies.rank = (SELECT MIN(movies.rank) FROM movies); 
+
