@@ -115,3 +115,31 @@ LEFT JOIN movies_directors ON movies.id = movies_directors.movie_id
 LEFT JOIN directors ON directors.id = movies_directors.director_id
 WHERE movies.rank = (SELECT MIN(movies.rank) FROM movies); 
 
+-- how many movies of each genre was made in a year
+SELECT movies.year,
+       movies_genres.genre,
+       COUNT(*) AS genre_count
+FROM movies
+LEFT JOIN movies_genres ON movies_genres.movie_id = movies.id
+GROUP BY movies.year, movies_genres.genre
+ORDER BY movies.year;
+
+-- each directors movie ranking next to their average movie ranking
+SELECT  movies.name AS movie,
+		CONCAT(directors.first_name, ' ', directors.last_name) AS director,
+		movies.rank,
+		ROUND(AVG(movies.rank) OVER (PARTITION BY directors.id), 1) AS average_ranking_by_director
+FROM movies
+LEFT JOIN movies_directors ON movies.id = movies_directors.movie_id
+LEFT JOIN directors ON directors.id = movies_directors.director_id
+ORDER BY directors.id, movies.rank DESC;
+
+-- directors and their average movie ranking
+SELECT CONCAT(directors.first_name, ' ', directors.last_name) AS director,
+		ROUND(AVG(movies.rank), 1) AS average_movie_ranking
+FROM movies
+LEFT JOIN movies_directors ON movies.id = movies_directors.movie_id
+LEFT JOIN directors ON directors.id = movies_directors.director_id
+GROUP BY movies_directors.director_id
+ORDER BY directors.id, movies.rank DESC;
+
